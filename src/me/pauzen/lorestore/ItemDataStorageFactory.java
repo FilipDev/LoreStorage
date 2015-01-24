@@ -9,11 +9,11 @@ public final class ItemDataStorageFactory {
     }
 
     public static ItemData registerItemDataFor(ItemStack itemStack) {
-        return ItemLoreData.getItemLoreData(itemStack);
+        return ItemLoreData.getData(itemStack);
     }
 
     public static ItemData fromID(String id) {
-        ItemData itemData = ItemLoreData.getItemLoreData(id);
+        ItemData itemData = ItemLoreData.getData(id);
         if (itemData == null) {
             throw new NullPointerException("You have not registered the ItemData for this ID yet. Use registerItemDataFor() first.");
         }

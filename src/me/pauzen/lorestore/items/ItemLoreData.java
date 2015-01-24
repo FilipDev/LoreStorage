@@ -3,6 +3,7 @@ package me.pauzen.lorestore.items;
 import me.pauzen.lorestore.ItemData;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -10,44 +11,41 @@ import java.util.*;
 
 public class ItemLoreData implements ItemData {
 
-    private static final ChatColor                    DEF_COLOUR    = ChatColor.WHITE;
-    private static final Random                       RANDOM        = new Random();
-    private static final String[]                     TESTS         = new String[]{": ", "="};
-    private static       Map<ItemStack, ItemLoreData> itemLoreCache = new HashMap<>();
-    private static       Map<String, ItemLoreData>    idCache       = new HashMap<>();
-    private              Map<String, Object>          values        = new HashMap<>();
+    private static final ChatColor                 DEF_COLOUR = ChatColor.WHITE;
+    private static final Random                    RANDOM     = new Random();
+    private static final String[]                  TESTS      = new String[]{": ", "="};
+    private static       Map<String, ItemLoreData> idCache    = new HashMap<>();
+    private              Map<String, Object>       values     = new HashMap<>();
     private ItemStack    itemStack;
     private String       id;
     private List<String> lore;
     private Map<String, Map.Entry<String, Object>> entryCache = new HashMap<>();
 
-    public ItemLoreData(ItemStack itemStack, String id) {
-        this.itemStack = itemStack;
-        this.id = id;
-        this.readAll();
-    }
-
-    public ItemLoreData(ItemStack itemStack) {
+    private ItemLoreData(ItemStack itemStack) {
         this.itemStack = itemStack;
         this.readAll();
         this.id = getID();
     }
 
     public static String getID(ItemStack itemStack) {
-        return getItemLoreData(itemStack).getID();
+        return getData(itemStack).getID();
     }
 
-    public static ItemLoreData getItemLoreData(ItemStack itemStack) {
-        if (itemLoreCache.containsKey(itemStack)) {
-            return itemLoreCache.get(itemStack);
+    public static ItemLoreData getData(ItemStack itemStack) {
+        if (itemStack == null || itemStack.getType() == Material.AIR) {
+            return null;
         }
         ItemLoreData itemLoreData = new ItemLoreData(itemStack);
-        itemLoreCache.put(itemStack, itemLoreData);
+        if (itemLoreData.checkID()) {
+            return idCache.get(itemLoreData.getID());
+        } else {
+            itemLoreData.writeValue(ChatColor.BLACK, "id", itemLoreData.generateID(6));
+        }
         idCache.put(itemLoreData.getID(), itemLoreData);
         return itemLoreData;
     }
 
-    public static ItemLoreData getItemLoreData(String id) {
+    public static ItemLoreData getData(String id) {
         return idCache.get(id);
     }
 
@@ -63,7 +61,11 @@ public class ItemLoreData implements ItemData {
 
     @Override
     public String getString(String key) {
-        return String.valueOf(this.values.get(key));
+        try {
+            return String.valueOf(this.values.get(key));
+        } catch (ClassCastException | NullPointerException e) {
+            return null;
+        }
     }
 
     @Override
@@ -85,7 +87,7 @@ public class ItemLoreData implements ItemData {
     public Integer getInt(String key) {
         try {
             return (Integer) this.values.get(key);
-        } catch (ClassCastException e) {
+        } catch (ClassCastException | NullPointerException e) {
             return null;
         }
     }
@@ -94,7 +96,7 @@ public class ItemLoreData implements ItemData {
     public Double getDouble(String key) {
         try {
             return (Double) this.values.get(key);
-        } catch (ClassCastException e) {
+        } catch (ClassCastException | NullPointerException e) {
             return null;
         }
     }
@@ -142,22 +144,32 @@ public class ItemLoreData implements ItemData {
 
         tryItemMeta();
 
-        if (!checkID()) {
-            writeValue(ChatColor.BLACK, "id", generateID(6));
-        }
+        return writeValueBypassChecks(chatColor, key, value);
+    }
+
+    private Object writeValueBypassChecks(ChatColor chatColor, String key, Object value) {
 
         ItemMeta itemMeta = itemStack.getItemMeta();
+        String finishedLine = chatColor + key + ": " + value;
 
         List<String> itemLore = itemMeta.getLore();
+        itemLore = itemLore == null ? new ArrayList<String>() : itemLore;
+        boolean hasEntry = false;
         for (String line : itemLore) {
             String[] parts = getParts(line);
 
+            parts[0] = ChatColor.stripColor(parts[0]);
+
             if (parts[0].equalsIgnoreCase(key)) {
-                String finishedLine = chatColor + key + ": " + value;
+                hasEntry = true;
                 itemLore.remove(line);
                 itemLore.add(finishedLine);
             }
         }
+        if (!hasEntry) {
+            itemLore.add(finishedLine);
+        }
+        itemMeta.setLore(itemLore);
         itemStack.setItemMeta(itemMeta);
 
         return this.values.put(key, value);
@@ -165,7 +177,7 @@ public class ItemLoreData implements ItemData {
 
     private void tryItemMeta() {
         if (!itemStack.hasItemMeta()) {
-            Bukkit.getItemFactory().getItemMeta(itemStack.getType());
+            itemStack.setItemMeta(Bukkit.getItemFactory().getItemMeta(itemStack.getType()));
         }
     }
 
@@ -173,16 +185,12 @@ public class ItemLoreData implements ItemData {
 
         tryItemMeta();
 
-        if (!(itemStack.getItemMeta().hasLore())) {
-            List<String> itemLore = itemStack.getItemMeta().getLore();
-            this.lore = itemLore;
-            for (String line : itemLore) {
-                Map.Entry<String, Object> entry = toEntry(line);
-                this.values.put(entry.getKey(), entry.getValue());
-            }
-        }
-        if (!checkID()) {
-            writeValue(ChatColor.BLACK, "id", generateID(6));
+        List<String> itemLore = itemStack.getItemMeta().getLore();
+        itemLore = itemLore == null ? new ArrayList<String>() : itemLore;
+        this.lore = itemLore;
+        for (String line : itemLore) {
+            Map.Entry<String, Object> entry = toEntry(line);
+            this.values.put(entry.getKey(), entry.getValue());
         }
     }
 
@@ -206,11 +214,11 @@ public class ItemLoreData implements ItemData {
 
     private Object tryParse(String value) {
         try {
-            return Double.parseDouble(value);
+            return Integer.parseInt(value);
         } catch (NumberFormatException ignored) {
         }
         try {
-            return Integer.parseInt(value);
+            return Double.parseDouble(value);
         } catch (NumberFormatException ignored) {
         }
 
@@ -224,6 +232,11 @@ public class ItemLoreData implements ItemData {
     }
 
     private boolean checkID() {
-        return this.values.get("id").equals(this.id);
+        String id = (String) this.values.get("id");
+        boolean hasID = id != null && id.equals(this.id);
+        if (hasID && !idCache.containsKey(id)) {
+            idCache.put(id, this);
+        }
+        return hasID;
     }
 }
