@@ -8,5 +8,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="Maven: org.bukkit:bukkit:1.8-R0.1-SNAPSHOT" level="project" />
+    <orderEntry type="library" name="craftbukkit" level="project" />
   </component>
 </module>

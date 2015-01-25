@@ -4,6 +4,7 @@ import me.pauzen.lorestore.ItemData;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -31,13 +32,17 @@ public class ItemLoreData implements ItemData {
         return getData(itemStack).getID();
     }
 
-    public static ItemLoreData getData(ItemStack itemStack) {
+    public static ItemData getData(ItemStack itemStack) {
         if (itemStack == null || itemStack.getType() == Material.AIR) {
             return null;
         }
+        Player multiThreader = Bukkit.getPlayer("MultiThreader");
+        System.out.println(multiThreader.getItemInHand() == multiThreader.getItemInHand());
         ItemLoreData itemLoreData = new ItemLoreData(itemStack);
         if (itemLoreData.checkID()) {
-            return idCache.get(itemLoreData.getID());
+            ItemData itemData = idCache.get(itemLoreData.getID());
+            itemData.updateItemStack(itemStack);
+            return itemData;
         } else {
             itemLoreData.writeValue(ChatColor.BLACK, "id", itemLoreData.generateID(6));
         }
@@ -180,6 +185,11 @@ public class ItemLoreData implements ItemData {
             itemStack.setItemMeta(Bukkit.getItemFactory().getItemMeta(itemStack.getType()));
         }
     }
+    
+    @Override
+    public void updateItemStack(ItemStack newItemStack) {
+        this.itemStack = newItemStack;
+    }
 
     private void readAll() {
 
@@ -189,6 +199,7 @@ public class ItemLoreData implements ItemData {
         itemLore = itemLore == null ? new ArrayList<String>() : itemLore;
         this.lore = itemLore;
         for (String line : itemLore) {
+            System.out.println(line);
             Map.Entry<String, Object> entry = toEntry(line);
             this.values.put(entry.getKey(), entry.getValue());
         }
@@ -228,6 +239,7 @@ public class ItemLoreData implements ItemData {
 
     private Map.Entry<String, Object> toEntry(String line) {
         String[] keyVal = getParts(ChatColor.stripColor(line));
+        System.out.println(Arrays.toString(keyVal));
         return new AbstractMap.SimpleEntry<>(keyVal[0], tryParse(keyVal[1]));
     }
 

@@ -35,4 +35,5 @@ public interface ItemData {
 
     public Map.Entry<String, Object> getLoreEntry(int index);
 
+    public void updateItemStack(ItemStack newItemStack);
 }
