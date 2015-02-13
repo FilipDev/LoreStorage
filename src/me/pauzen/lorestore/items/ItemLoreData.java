@@ -4,7 +4,6 @@ import me.pauzen.lorestore.ItemData;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
@@ -36,14 +35,13 @@ public class ItemLoreData implements ItemData {
         if (itemStack == null || itemStack.getType() == Material.AIR) {
             return null;
         }
-        Player multiThreader = Bukkit.getPlayer("MultiThreader");
-        System.out.println(multiThreader.getItemInHand() == multiThreader.getItemInHand());
         ItemLoreData itemLoreData = new ItemLoreData(itemStack);
         if (itemLoreData.checkID()) {
             ItemData itemData = idCache.get(itemLoreData.getID());
             itemData.updateItemStack(itemStack);
             return itemData;
-        } else {
+        }
+        else {
             itemLoreData.writeValue(ChatColor.BLACK, "id", itemLoreData.generateID(6));
         }
         idCache.put(itemLoreData.getID(), itemLoreData);
@@ -185,7 +183,7 @@ public class ItemLoreData implements ItemData {
             itemStack.setItemMeta(Bukkit.getItemFactory().getItemMeta(itemStack.getType()));
         }
     }
-    
+
     @Override
     public void updateItemStack(ItemStack newItemStack) {
         this.itemStack = newItemStack;
